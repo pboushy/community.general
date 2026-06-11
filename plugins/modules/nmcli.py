@@ -722,6 +722,131 @@ options:
         type: int
         default: 0
     version_added: 3.0.0
+  eap:
+    description:
+      - The 802.1X (IEEE 802.1X) configuration of the connection.
+      - Used for enterprise authentication such as WiFi WPA-Enterprise with EAP-TLS, EAP-PEAP, or EAP-TTLS.
+      - This is typically combined with O(wifi_sec.key-mgmt=wpa-eap) (or V(wpa-eap-suite-b-192)) for WiFi connections.
+      - Note the list of suboption attributes may vary depending on which version of NetworkManager/nmcli is installed on
+        the host.
+      - 'An up-to-date list of supported attributes can be found here: U(https://networkmanager.dev/docs/api/latest/settings-802-1x.html).'
+      - 'For instance to use EAP-TLS authentication: V({eap: tls, identity: user@example.com, ca-cert: /etc/certs/ca.pem,
+        client-cert: /etc/certs/client.pem, private-key: /etc/certs/client.key, private-key-password: my_password}).'
+    type: dict
+    suboptions:
+      eap:
+        description:
+          - The allowed EAP method to be used when authenticating to the network with 802.1X.
+          - 'Valid methods are V(leap), V(md5), V(tls), V(peap), V(ttls), V(pwd), and V(fast).'
+        type: list
+        elements: str
+        choices: [leap, md5, tls, peap, ttls, pwd, fast]
+      identity:
+        description:
+          - Identity string for EAP authentication methods, often the user's username for tunneled methods or the user's
+            certificate common name for TLS.
+        type: str
+      anonymous-identity:
+        description:
+          - Anonymous identity string for EAP authentication methods.
+          - Used as the unencrypted identity with EAP types that support different tunneled identities like EAP-TTLS.
+        type: str
+      domain-suffix-match:
+        description:
+          - Constraint for server domain name.
+          - If set, this list of FQDNs is used as a match requirement against the C(dNSName) element(s) of the certificate
+            presented by the authentication server.
+        type: str
+      ca-cert:
+        description:
+          - Contains the CA certificate if used by the EAP method specified in the O(eap.eap) property.
+          - 'The value must be a valid path to a certificate file, optionally prefixed with V(file://).'
+        type: str
+      ca-path:
+        description:
+          - The directory containing additional CA certificates to add to the verification chain.
+        type: str
+      client-cert:
+        description:
+          - Contains the client certificate if used by the EAP method specified in the O(eap.eap) property.
+          - 'The value must be a valid path to a certificate file, optionally prefixed with V(file://).'
+        type: str
+      private-key:
+        description:
+          - Contains the private key when the O(eap.eap) property is set to V(tls).
+          - 'The value must be a valid path to a key file, optionally prefixed with V(file://).'
+        type: str
+      private-key-password:
+        description:
+          - The password used to decrypt the private key specified in the O(eap.private-key) property when the private key
+            is either password-protected or has to be decrypted to access the key.
+        type: str
+      private-key-password-flags:
+        description: Flags indicating how to handle the O(eap.private-key-password) property.
+        type: list
+        elements: int
+      phase1-auth-flags:
+        description:
+          - Specifies authentication flags to use in C(phase 1) outer authentication.
+        type: int
+      phase2-auth:
+        description:
+          - Specifies the allowed C(phase 2) inner non-EAP authentication method when an EAP method that uses an inner TLS
+            tunnel is specified in the O(eap.eap) property.
+        type: str
+      phase2-autheap:
+        description:
+          - Specifies the allowed C(phase 2) inner EAP-based authentication method when an EAP method that uses an inner TLS
+            tunnel is specified in the O(eap.eap) property.
+        type: str
+      phase2-ca-cert:
+        description:
+          - Contains the C(phase 2) CA certificate if used by the EAP method specified in the O(eap.phase2-auth) or O(eap.phase2-autheap)
+            property.
+          - 'The value must be a valid path to a certificate file, optionally prefixed with V(file://).'
+        type: str
+      phase2-client-cert:
+        description:
+          - Contains the C(phase 2) client certificate if used by the EAP method specified in the O(eap.phase2-auth) or O(eap.phase2-autheap)
+            property.
+          - 'The value must be a valid path to a certificate file, optionally prefixed with V(file://).'
+        type: str
+      phase2-private-key:
+        description:
+          - Contains the C(phase 2) inner private key when the O(eap.phase2-auth) or O(eap.phase2-autheap) property is set
+            to V(tls).
+          - 'The value must be a valid path to a key file, optionally prefixed with V(file://).'
+        type: str
+      phase2-private-key-password:
+        description:
+          - The password used to decrypt the C(phase 2) private key specified in the O(eap.phase2-private-key) property.
+        type: str
+      phase2-private-key-password-flags:
+        description: Flags indicating how to handle the O(eap.phase2-private-key-password) property.
+        type: list
+        elements: int
+      password:
+        description:
+          - Password used for EAP authentication methods that require a password (such as EAP-PEAP or EAP-TTLS).
+        type: str
+      password-flags:
+        description: Flags indicating how to handle the O(eap.password) property.
+        type: list
+        elements: int
+      pin:
+        description:
+          - PIN used for EAP authentication methods.
+        type: str
+      pin-flags:
+        description: Flags indicating how to handle the O(eap.pin) property.
+        type: list
+        elements: int
+      system-ca-certs:
+        description:
+          - When V(true), overrides the O(eap.ca-path) and O(eap.phase2-ca-path) properties using the system CA directory
+            specified at configure time with the C(--system-ca-path) switch.
+        type: bool
+    version_added: 13.1.0
   ssid:
     description:
       - Name of the Wireless router or the access point.
@@ -886,7 +1011,7 @@ options:
   ignore_unsupported_suboptions:
     description:
       - Ignore suboptions which are invalid or unsupported by the version of NetworkManager/nmcli installed on the host.
-      - Only O(wifi) and O(wifi_sec) options are currently affected.
+      - Only O(wifi), O(wifi_sec), and O(eap) options are currently affected.
     type: bool
     default: false
     version_added: 3.6.0
@@ -1535,6 +1660,24 @@ EXAMPLES = r"""
     autoconnect: true
     state: present
 
+- name: Create a wifi connection with 802.1X EAP-TLS authentication
+  community.general.nmcli:
+    type: wifi
+    conn_name: Enterprise
+    ifname: wlp4s0
+    ssid: Enterprise
+    wifi_sec:
+      key-mgmt: wpa-eap
+    eap:
+      eap: tls
+      identity: user@example.com
+      ca-cert: /etc/certs/ca.pem
+      client-cert: /etc/certs/client.pem
+      private-key: /etc/certs/client.key
+      private-key-password: my_password
+    autoconnect: true
+    state: present
+
 - name: Create a hidden AP mode wifi connection
   community.general.nmcli:
     type: wifi
@@ -1737,6 +1880,14 @@ class Nmcli:
         "802-11-wireless-security.wep-key1",
         "802-11-wireless-security.wep-key2",
         "802-11-wireless-security.wep-key3",
+        "802-1x.ca-cert-password",
+        "802-1x.client-cert-password",
+        "802-1x.password",
+        "802-1x.phase2-ca-cert-password",
+        "802-1x.phase2-client-cert-password",
+        "802-1x.phase2-private-key-password",
+        "802-1x.pin",
+        "802-1x.private-key-password",
     )
 
     def __init__(self, module):
@@ -1823,6 +1974,7 @@ class Nmcli:
         self.ssid = module.params["ssid"]
         self.wifi = module.params["wifi"]
         self.wifi_sec = module.params["wifi_sec"]
+        self.eap = module.params["eap"]
         self.gsm = module.params["gsm"]
         self.macvlan = module.params["macvlan"]
         self.wireguard = module.params["wireguard"]
@@ -2088,6 +2240,9 @@ class Nmcli:
             if self.wifi_sec:
                 for name, value in self.wifi_sec.items():
                     options.update({f"802-11-wireless-security.{name}": value})
+            if self.eap:
+                for name, value in self.eap.items():
+                    options.update({f"802-1x.{name}": value})
         elif self.type == "gsm":
             if self.gsm:
                 for name, value in self.gsm.items():
@@ -2357,6 +2512,7 @@ class Nmcli:
             "ipv6.ignore-auto-dns",
             "ipv6.ignore-auto-routes",
             "802-11-wireless.hidden",
+            "802-1x.system-ca-certs",
             "team.runner-fast-rate",
             "macvlan.tap",
         }:
@@ -2381,6 +2537,15 @@ class Nmcli:
             "802-11-wireless-security.psk-flags",
             "802-11-wireless-security.wep-key-flags",
             "802-11-wireless.mac-address-blacklist",
+            "802-1x.eap",
+            "802-1x.ca-cert-password-flags",
+            "802-1x.client-cert-password-flags",
+            "802-1x.password-flags",
+            "802-1x.phase2-ca-cert-password-flags",
+            "802-1x.phase2-client-cert-password-flags",
+            "802-1x.phase2-private-key-password-flags",
+            "802-1x.pin-flags",
+            "802-1x.private-key-password-flags",
         }:
             return list
         elif setting in {"connection.autoconnect-priority", "connection.autoconnect-retries"}:
@@ -2566,9 +2731,12 @@ class Nmcli:
             set_property = "psk"
             set_value = "FAKEVALUE"
             commands = [f"set {setting}.{set_property} {set_value}"]
+        elif setting == "802-1x":
+            set_property = "eap"
+            set_value = "tls"
+            commands = [f"set {setting}.{set_property} {set_value}"]
         else:
             commands = []
-
         commands += [f"print {setting}", "quit", "yes"]
 
         (rc, out, err) = self.execute_edit_commands(commands, arguments=["type", self.type])
@@ -2590,6 +2758,8 @@ class Nmcli:
             setting_key = "wifi"
         elif setting == "802-11-wireless-security":
             setting_key = "wifi_sec"
+        elif setting == "802-1x":
+            setting_key = "eap"
         else:
             setting_key = setting
 
@@ -2883,6 +3053,7 @@ def create_module() -> AnsibleModule:
             ssid=dict(type="str"),
             wifi=dict(type="dict"),
             wifi_sec=dict(type="dict", no_log=True),
+            eap=dict(type="dict", no_log=True),
             gsm=dict(type="dict"),
             macvlan=dict(
                 type="dict",
@@ -2942,6 +3113,8 @@ def main():
             unsupported_properties["wifi"] = nmcli.check_for_unsupported_properties("802-11-wireless")
         if nmcli.wifi_sec:
             unsupported_properties["wifi_sec"] = nmcli.check_for_unsupported_properties("802-11-wireless-security")
+        if nmcli.eap:
+            unsupported_properties["eap"] = nmcli.check_for_unsupported_properties("802-1x")
         if nmcli.ignore_unsupported_suboptions and unsupported_properties:
             for setting_key, properties in unsupported_properties.items():
                 for property in properties:

@@ -1368,6 +1368,51 @@ TESTCASE_DEFAULT_SECURE_WIRELESS_SHOW_OUTPUT = (
 )
 
 
+TESTCASE_EAP_TLS_WIRELESS = [
+    {
+        "type": "wifi",
+        "conn_name": "non_existent_nw_device",
+        "ifname": "wireless_non_existant",
+        "ip4": "10.10.10.10/24",
+        "ssid": "Brittany",
+        "wifi_sec": {
+            "key-mgmt": "wpa-eap",
+        },
+        "eap": {
+            "eap": "tls",
+            "identity": "user@example.com",
+            "ca-cert": "/etc/certs/ca.pem",
+            "client-cert": "/etc/certs/client.pem",
+            "private-key": "/etc/certs/client.key",
+            "private-key-password": "VERY_SECURE_PASSWORD",
+        },
+        "state": "present",
+        "_ansible_check_mode": False,
+    }
+]
+
+TESTCASE_DEFAULT_EAP_TLS_WIRELESS_SHOW_OUTPUT = (
+    TESTCASE_DEFAULT_SECURE_WIRELESS_SHOW_OUTPUT
+    + """\
+802-1x.eap:                             tls
+802-1x.identity:                        --
+802-1x.anonymous-identity:              --
+802-1x.domain-suffix-match:             --
+802-1x.ca-cert:                         --
+802-1x.ca-path:                         --
+802-1x.client-cert:                     --
+802-1x.private-key:                     --
+802-1x.private-key-password:            --
+802-1x.private-key-password-flags:      0 (none)
+802-1x.password:                        --
+802-1x.password-flags:                  0 (none)
+802-1x.pin:                             --
+802-1x.pin-flags:                       0 (none)
+802-1x.system-ca-certs:                 no
+"""
+)
+
+
 TESTCASE_DUMMY_STATIC = [
     {
         "type": "dummy",
@@ -2125,6 +2170,20 @@ def mocked_secure_wireless_modify_failure(mocker):
             (0, TESTCASE_DEFAULT_SECURE_WIRELESS_SHOW_OUTPUT, ""),
             (0, "", ""),
             (1, "", ""),
+        ),
+    )
+
+
+@pytest.fixture
+def mocked_eap_tls_wireless_create(mocker):
+    mocker_set(
+        mocker,
+        execute_return=None,
+        execute_side_effect=(
+            (0, TESTCASE_DEFAULT_SECURE_WIRELESS_SHOW_OUTPUT, ""),
+            (0, TESTCASE_DEFAULT_EAP_TLS_WIRELESS_SHOW_OUTPUT, ""),
+            (0, "", ""),
+            (0, "", ""),
         ),
     )
 
@@ -4098,6 +4157,91 @@ def test_create_secure_wireless(mocked_secure_wireless_create, capfd):
 
     edit_kw_data = edit_kw["data"].split()
     for param in ["802-11-wireless-security.psk", "VERY_SECURE_PASSWORD", "save", "quit"]:
+        assert param in edit_kw_data
+
+    out, err = capfd.readouterr()
+    results = json.loads(out)
+    assert not results.get("failed")
+    assert results["changed"]
+
+
+@pytest.mark.parametrize("patch_ansible_module", TESTCASE_EAP_TLS_WIRELESS, indirect=["patch_ansible_module"])
+def test_create_eap_tls_wireless(mocked_eap_tls_wireless_create, capfd):
+    """
+    Test : Create wireless connection with 802.1X EAP-TLS authentication
+    """
+
+    with pytest.raises(SystemExit):
+        nmcli.main()
+
+    assert nmcli.Nmcli.execute_command.call_count == 4
+    arg_list = nmcli.Nmcli.execute_command.call_args_list
+
+    wifi_sec_options_args, wifi_sec_options_kw = arg_list[0]
+    assert wifi_sec_options_args[0][0] == "/usr/bin/nmcli"
+    assert wifi_sec_options_args[0][1] == "con"
+    assert wifi_sec_options_args[0][2] == "edit"
+    assert wifi_sec_options_args[0][3] == "type"
+    assert wifi_sec_options_args[0][4] == "wifi"
+
+    wifi_sec_options_data = wifi_sec_options_kw["data"].split()
+    for param in ["print", "802-11-wireless-security", "quit", "yes"]:
+        assert param in wifi_sec_options_data
+
+    eap_options_args, eap_options_kw = arg_list[1]
+    assert eap_options_args[0][0] == "/usr/bin/nmcli"
+    assert eap_options_args[0][1] == "con"
+    assert eap_options_args[0][2] == "edit"
+    assert eap_options_args[0][3] == "type"
+    assert eap_options_args[0][4] == "wifi"
+
+    eap_options_data = eap_options_kw["data"].split()
+    for param in ["print", "802-1x", "quit", "yes"]:
+        assert param in eap_options_data
+
+    add_args, add_kw = arg_list[2]
+    assert add_args[0][0] == "/usr/bin/nmcli"
+    assert add_args[0][1] == "con"
+    assert add_args[0][2] == "add"
+    assert add_args[0][3] == "type"
+    assert add_args[0][4] == "wifi"
+    assert add_args[0][5] == "con-name"
+    assert add_args[0][6] == "non_existent_nw_device"
+
+    add_args_text = [to_text(x) for x in add_args[0]]
+    for param in [
+        "connection.interface-name",
+        "wireless_non_existant",
+        "ipv4.addresses",
+        "10.10.10.10/24",
+        "802-11-wireless.ssid",
+        "Brittany",
+        "802-11-wireless-security.key-mgmt",
+        "wpa-eap",
+        "802-1x.eap",
+        "tls",
+        "802-1x.identity",
+        "user@example.com",
+        "802-1x.ca-cert",
+        "/etc/certs/ca.pem",
+        "802-1x.client-cert",
+        "/etc/certs/client.pem",
+        "802-1x.private-key",
+        "/etc/certs/client.key",
+    ]:
+        assert param in add_args_text
+
+    # The private key password is a secret and must be set through the edit interface.
+    assert "802-1x.private-key-password" not in add_args_text
+
+    edit_args, edit_kw = arg_list[3]
+    assert edit_args[0][0] == "/usr/bin/nmcli"
+    assert edit_args[0][1] == "con"
+    assert edit_args[0][2] == "edit"
+    assert edit_args[0][3] == "non_existent_nw_device"
+
+    edit_kw_data = edit_kw["data"].split()
+    for param in ["802-1x.private-key-password", "VERY_SECURE_PASSWORD", "save", "quit"]:
         assert param in edit_kw_data
 
     out, err = capfd.readouterr()

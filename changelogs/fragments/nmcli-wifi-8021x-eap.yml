@@ -1,0 +1,2 @@
+minor_changes:
+  - nmcli - add support for configuring 802.1X (IEEE 802.1X) enterprise authentication on WiFi connections through the new ``eap`` option, allowing setups such as WPA-Enterprise with EAP-TLS (https://github.com/ansible-collections/community.general/pull/12193).
